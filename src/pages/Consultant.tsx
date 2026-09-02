@@ -120,6 +120,7 @@ export default function Consultant() {
                   src={expert.image} 
                   alt={expert.nameEn} 
                   className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-gray-50 shrink-0"
+                  referrerPolicy="no-referrer"
                 />
                 <div>
                   <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { Camera, Mic, Sprout, Bot, BookOpen, Users } from 'lucide-react';
+import { Camera, Mic, Sprout, Bot, BookOpen, Users, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function Home() {
@@ -52,19 +52,34 @@ export default function Home() {
     }
   ];
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 120, damping: 12 } },
+  };
+
   return (
     <div className="flex flex-col gap-16 pb-16">
       {/* Hero Section */}
-      <section className="relative pt-12 pb-16 md:pt-20 md:pb-24 overflow-hidden rounded-3xl bg-gradient-to-b from-orange-50/70 via-white/50 to-green-100/60 border border-white/60 shadow-lg backdrop-blur-sm mt-4">
+      <section className="relative pt-12 pb-16 md:pt-20 md:pb-24 overflow-hidden rounded-3xl bg-gradient-to-b from-orange-50/70 via-white/50 to-green-100/60 border border-white/60 shadow-lg mt-4">
         
         {/* Decorative background elements */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-30">
-          <div className="absolute -top-20 -left-20 w-64 h-64 bg-orange-300 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-green-400 rounded-full blur-3xl"></div>
+        <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
+          <div className="absolute -top-20 -left-20 w-64 h-64 bg-orange-300 rounded-full blur-[64px] will-change-transform transform-gpu"></div>
+          <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-green-400 rounded-full blur-[64px] will-change-transform transform-gpu"></div>
         </div>
 
         <div className="relative z-10 px-6 md:px-12 flex flex-col items-center gap-10">
-          <div className="text-center space-y-6 max-w-4xl mx-auto">
+          <div className="text-center max-w-4xl mx-auto space-y-8">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -83,6 +98,7 @@ export default function Home() {
                 {isEn ? 'Your AI Farming Companion' : 'आपका एआई खेती साथी'}
               </span>
             </motion.h1>
+            
             <motion.p 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -131,85 +147,107 @@ export default function Home() {
       </section>
 
       {/* How it works */}
-      <section className="text-center space-y-12">
-        <motion.h2 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-3xl font-bold text-gray-900"
-        >
+      <motion.section 
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={containerVariants}
+        className="text-center space-y-10"
+      >
+        <motion.h2 variants={itemVariants} className="text-3xl font-extrabold text-gray-900">
           {isEn ? 'How KisanMitra Works' : 'किसानमित्र कैसे काम करता है'}
         </motion.h2>
-        <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 text-lg font-medium text-gray-600">
+        <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-6 font-medium text-gray-600">
           {['Capture', 'Analyze', 'Understand', 'Act', 'Follow Up'].map((step, i) => (
-             <motion.div 
-               key={step} 
-               initial={{ opacity: 0, scale: 0.8 }}
-               whileInView={{ opacity: 1, scale: 1 }}
-               viewport={{ once: true }}
-               transition={{ delay: i * 0.15 }}
-               className="flex flex-col md:flex-row items-center gap-4 md:gap-8"
+             <motion.div
+               key={step}
+               variants={itemVariants}
+               className="flex flex-col md:flex-row items-center gap-3 md:gap-6"
              >
-               <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3">
-                 <span className="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold">{i + 1}</span>
+               <div className="bg-white px-5 py-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3 hover:border-green-300 hover:shadow-md transition-all cursor-default">
+                 <span className="w-7 h-7 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold text-sm">{i + 1}</span>
                  {isEn ? step : ['फोटो लें', 'विश्लेषण करें', 'समझें', 'कार्रवाई करें', 'निगरानी करें'][i]}
                </div>
-               {i < 4 && <div className="hidden md:block text-green-300">➔</div>}
-               {i < 4 && <div className="md:hidden text-green-300">↓</div>}
+               {i < 4 && <div className="hidden md:block text-green-300"><ArrowRight className="w-5 h-5"/></div>}
+               {i < 4 && <div className="md:hidden text-green-300 rotate-90"><ArrowRight className="w-5 h-5"/></div>}
              </motion.div>
           ))}
         </div>
-      </section>
+      </motion.section>
 
       {/* Features Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <motion.section 
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+        variants={containerVariants}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+      >
         {features.map((f, i) => (
-          <motion.div 
-            key={i}
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.1, type: "spring", stiffness: 100 }}
-            whileHover={{ scale: 1.02 }}
-          >
-            <Link to={f.link} className="block group h-full bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-xl hover:border-green-200 transition-all">
-              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 ${f.color}`}>
+          <motion.div key={i} variants={itemVariants}>
+            <Link to={f.link} className={`block group h-full bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1`}>
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-transform group-hover:scale-110 ${f.color}`}>
                 {f.icon}
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-green-700 transition-colors">
+              <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-green-700 transition-colors">
                 {f.title}
               </h3>
-              <p className="text-gray-600 leading-relaxed">
+              <p className="text-gray-500 leading-relaxed font-medium">
                 {f.desc}
               </p>
             </Link>
           </motion.div>
         ))}
-      </section>
+      </motion.section>
 
       {/* About Section */}
       <motion.section 
-        initial={{ opacity: 0, y: 40 }}
-        whileInView={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, y: 40, scale: 0.98 }}
+        whileInView={{ opacity: 1, y: 0, scale: 1 }}
         viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        className="bg-white rounded-3xl p-8 md:p-12 border border-gray-200 shadow-sm"
+        transition={{ duration: 0.7, type: 'spring' }}
+        className="bg-white rounded-3xl p-8 md:p-12 border border-gray-100 shadow-md relative overflow-hidden group"
       >
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-green-50/80 rounded-full blur-[64px] -z-10 group-hover:scale-110 transition-transform duration-700 will-change-transform transform-gpu"></div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-8 relative z-10">
           {isEn ? 'About KisanMitra' : 'किसानमित्र के बारे में'}
         </h2>
-        <div className="grid md:grid-cols-3 gap-8">
-          <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }}>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">{isEn ? 'Problem' : 'समस्या'}</h3>
-            <p className="text-gray-600">{isEn ? 'Farmers often need to identify crop problems quickly but may not have immediate access to agricultural experts.' : 'किसानों को अक्सर फसल की समस्याओं को जल्दी पहचानने की आवश्यकता होती है, लेकिन कृषि विशेषज्ञों तक तत्काल पहुंच नहीं हो सकती है।'}</p>
+        <div className="grid md:grid-cols-3 gap-8 relative z-10">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            whileInView={{ opacity: 1, y: 0 }} 
+            viewport={{ once: true }} 
+            transition={{ delay: 0.2, type: 'spring' }}
+          >
+            <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-red-400"></span>
+              {isEn ? 'Problem' : 'समस्या'}
+            </h3>
+            <p className="text-gray-500 font-medium leading-relaxed">{isEn ? 'Farmers often need to identify crop problems quickly but may not have immediate access to agricultural experts.' : 'किसानों को अक्सर फसल की समस्याओं को जल्दी पहचानने की आवश्यकता होती है, लेकिन कृषि विशेषज्ञों तक तत्काल पहुंच नहीं हो सकती है।'}</p>
           </motion.div>
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.4 }}>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">{isEn ? 'Solution' : 'समाधान'}</h3>
-            <p className="text-gray-600">{isEn ? 'KisanMitra combines AI image analysis, conversational AI, voice interaction and personalized farm guidance into one platform.' : 'किसानमित्र एआई छवि विश्लेषण, संवादात्मक एआई, वॉयस इंटरेक्शन और व्यक्तिगत कृषि मार्गदर्शन को एक मंच में जोड़ता है।'}</p>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            whileInView={{ opacity: 1, y: 0 }} 
+            viewport={{ once: true }} 
+            transition={{ delay: 0.3, type: 'spring' }}
+          >
+            <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-400"></span>
+              {isEn ? 'Solution' : 'समाधान'}
+            </h3>
+            <p className="text-gray-500 font-medium leading-relaxed">{isEn ? 'KisanMitra combines AI image analysis, conversational AI, voice interaction and personalized farm guidance into one platform.' : 'किसानमित्र एआई छवि विश्लेषण, संवादात्मक एआई, वॉयस इंटरेक्शन और व्यक्तिगत कृषि मार्गदर्शन को एक मंच में जोड़ता है।'}</p>
           </motion.div>
-          <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: 0.6 }}>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">{isEn ? 'Unique Value' : 'अद्वितीय मूल्य'}</h3>
-            <p className="text-gray-600">{isEn ? 'KisanMitra does not simply detect a crop problem. It follows: Detect → Explain → Guide → Monitor → Escalate.' : 'किसानमित्र केवल फसल की समस्या का पता नहीं लगाता है। यह अनुसरण करता है: पता लगाएं → समझाएं → मार्गदर्शन करें → निगरानी करें → आगे बढ़ाएं।'}</p>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            whileInView={{ opacity: 1, y: 0 }} 
+            viewport={{ once: true }} 
+            transition={{ delay: 0.4, type: 'spring' }}
+          >
+            <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+              {isEn ? 'Unique Value' : 'अद्वितीय मूल्य'}
+            </h3>
+            <p className="text-gray-500 font-medium leading-relaxed">{isEn ? 'KisanMitra does not simply detect a crop problem. It follows: Detect → Explain → Guide → Monitor → Escalate.' : 'किसानमित्र केवल फसल की समस्या का पता नहीं लगाता है। यह अनुसरण करता है: पता लगाएं → समझाएं → मार्गदर्शन करें → निगरानी करें → आगे बढ़ाएं।'}</p>
           </motion.div>
         </div>
       </motion.section>

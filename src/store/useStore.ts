@@ -165,6 +165,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'kisanmitra-storage',
+      version: 2,
     }
   )
 );

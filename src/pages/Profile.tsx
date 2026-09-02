@@ -1,12 +1,23 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { UserCircle, Save, MapPin, Phone, Ruler, Camera, Crown } from 'lucide-react';
+import { UserCircle, Save, MapPin, Phone, Ruler, Camera, Crown, LogOut } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 
 export default function Profile() {
   const { language, profile, updateProfile, user, isPro } = useStore();
   const isEn = language === 'en';
+  const navigate = useNavigate();
+  
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
   
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(profile);
@@ -125,7 +136,7 @@ export default function Profile() {
         <div className="p-8 text-center bg-emerald-50/50 border-b border-gray-100">
           <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 relative overflow-hidden group">
             {(isEditing ? formData.photoUrl : profile.photoUrl) ? (
-              <img src={isEditing ? formData.photoUrl : profile.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+              <img src={isEditing ? formData.photoUrl : profile.photoUrl} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             ) : (
               <UserCircle className="w-12 h-12" />
             )}
@@ -252,6 +263,13 @@ export default function Profile() {
                 className="w-full bg-emerald-50 text-emerald-700 py-3 rounded-xl font-bold hover:bg-emerald-100 transition-colors mt-8 border border-emerald-100"
               >
                 {isEn ? 'Edit Profile' : 'प्रोफ़ाइल संपादित करें'}
+              </button>
+              <button 
+                onClick={handleLogout}
+                className="w-full bg-white text-red-600 py-3 rounded-xl font-bold hover:bg-red-50 transition-colors mt-4 border border-red-200 flex items-center justify-center gap-2"
+              >
+                <LogOut className="w-5 h-5" />
+                {isEn ? 'Logout' : 'लॉग आउट'}
               </button>
             </div>
           )}

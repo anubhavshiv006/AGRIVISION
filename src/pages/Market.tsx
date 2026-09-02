@@ -11,10 +11,10 @@ const SUGGESTIONS = [
 ];
 
 const ONLINE_PRODUCTS = [
-  { id: 101, name: 'KisanGuard Organic Spray', price: 399, rating: 4.8, img: 'https://images.unsplash.com/photo-1595867490076-96b6680a6b25?auto=format&fit=crop&q=80&w=200' },
-  { id: 102, name: 'EcoProtect Bio-Pesticide', price: 549, rating: 4.6, img: 'https://images.unsplash.com/photo-1584346890343-2287413693e5?auto=format&fit=crop&q=80&w=200' },
-  { id: 103, name: 'AgriSafe Fungicide Plus', price: 299, rating: 4.5, img: 'https://images.unsplash.com/photo-1628183188582-7104e176df74?auto=format&fit=crop&q=80&w=200' },
-  { id: 104, name: 'NutriBoost Liquid Fertilizer', price: 450, rating: 4.9, img: 'https://images.unsplash.com/photo-1605000797499-95a51c5269ae?auto=format&fit=crop&q=80&w=200' },
+  { id: 101, name: 'KisanGuard Organic Spray', price: 399, rating: 4.8, img: 'https://upload.wikimedia.org/wikipedia/commons/7/75/Condor_landbouwspuit.jpg' },
+  { id: 102, name: 'EcoProtect Bio-Pesticide', price: 549, rating: 4.6, img: 'https://upload.wikimedia.org/wikipedia/commons/7/75/Condor_landbouwspuit.jpg' },
+  { id: 103, name: 'AgriSafe Fungicide Plus', price: 299, rating: 4.5, img: 'https://upload.wikimedia.org/wikipedia/commons/7/75/Condor_landbouwspuit.jpg' },
+  { id: 104, name: 'NutriBoost Liquid Fertilizer', price: 450, rating: 4.9, img: 'https://upload.wikimedia.org/wikipedia/commons/7/75/Condor_landbouwspuit.jpg' },
 ];
 
 const MANDI_PRICES = [
@@ -128,13 +128,13 @@ export default function Market() {
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
-                { name: 'Mahindra 575 DI', owner: 'Ramesh Singh', price: '₹500/hr', img: 'https://images.unsplash.com/photo-1592982537447-75407703fc84?w=400&q=80' },
-                { name: 'Rotavator Heavy Duty', owner: 'Suresh Kumar', price: '₹300/hr', img: 'https://images.unsplash.com/photo-1627521798319-335607db7b15?w=400&q=80' },
-                { name: 'Seed Drill Machine', owner: 'Prakash', price: '₹250/hr', img: 'https://images.unsplash.com/photo-1605000797499-95a51c5269ae?w=400&q=80' }
+                { name: 'Mahindra 575 DI', owner: 'Ramesh Singh', price: '₹500/hr', img: 'https://upload.wikimedia.org/wikipedia/commons/1/18/A_John_Deere_9320_at_a_construction_site_in_the_US.jpg' },
+                { name: 'Rotavator Heavy Duty', owner: 'Suresh Kumar', price: '₹300/hr', img: 'https://upload.wikimedia.org/wikipedia/commons/b/b2/TractorWithMountedRototiller.JPG' },
+                { name: 'Seed Drill Machine', owner: 'Prakash', price: '₹250/hr', img: 'https://upload.wikimedia.org/wikipedia/commons/3/3c/Bourgault_Air_Seeder_%26_Paralink_Hoe_Drill.jpg' }
               ].map((item, i) => (
                 <div key={i} className="border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
                   <div className="h-40 overflow-hidden bg-gray-100">
-                    <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
+                    <img src={item.img} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   </div>
                   <div className="p-4">
                     <h3 className="font-bold text-gray-900 mb-1">{item.name}</h3>
@@ -162,7 +162,7 @@ export default function Market() {
               {ONLINE_PRODUCTS.map(p => (
                 <div key={p.id} className="border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow group flex flex-col">
                   <div className="h-40 overflow-hidden bg-gray-100">
-                    <img src={p.img} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <img src={p.img} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" referrerPolicy="no-referrer" />
                   </div>
                   <div className="p-4 flex flex-col flex-1">
                     <h3 className="font-bold text-gray-900 mb-1">{p.name}</h3>

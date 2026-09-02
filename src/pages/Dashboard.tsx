@@ -148,7 +148,7 @@ export default function Dashboard() {
               <div className="space-y-4">
                 {history.map(item => (
                   <div key={item.id} className="border border-gray-100 rounded-2xl overflow-hidden hover:border-gray-200 transition-colors">
-                    <img src={item.imageUrl} alt={item.crop} className="w-full h-32 object-cover bg-gray-50" />
+                    <img src={item.imageUrl} alt={item.crop} className="w-full h-32 object-cover bg-gray-50" referrerPolicy="no-referrer" />
                     <div className="p-4">
                       <div className="flex justify-between items-start mb-2">
                         <h3 className="font-bold text-gray-900">{item.crop}</h3>

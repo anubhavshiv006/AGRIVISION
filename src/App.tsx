@@ -4,13 +4,14 @@
  */
 
 import { Suspense, lazy, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { Leaf } from 'lucide-react';
 import { useStore } from './store/useStore';
 import { supabase } from './lib/supabase';
+import { AnimatePresence, motion } from 'motion/react';
 
-const Home = lazy(() => import('./pages/Home'));
+import Home from './pages/Home';
 const CropDoctor = lazy(() => import('./pages/CropDoctor'));
 const Agent = lazy(() => import('./pages/Agent'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -32,6 +33,37 @@ const LoadingFallback = () => (
   </div>
 );
 
+const PageTransition = ({ children }: { children: React.ReactNode }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.3 }}
+  >
+    {children}
+  </motion.div>
+);
+
+function AnimatedRoutes() {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<PageTransition><Home /></PageTransition>} />
+        <Route path="/dashboard" element={<PageTransition><Dashboard /></PageTransition>} />
+        <Route path="/doctor" element={<PageTransition><CropDoctor /></PageTransition>} />
+        <Route path="/agent" element={<PageTransition><Agent /></PageTransition>} />
+        <Route path="/knowledge" element={<PageTransition><Knowledge /></PageTransition>} />
+        <Route path="/schemes" element={<PageTransition><Schemes /></PageTransition>} />
+        <Route path="/market" element={<PageTransition><Market /></PageTransition>} />
+        <Route path="/consult" element={<PageTransition><Consultant /></PageTransition>} />
+        <Route path="/budget" element={<PageTransition><Budget /></PageTransition>} />
+        <Route path="/profile" element={<PageTransition><Profile /></PageTransition>} />
+      </Routes>
+    </AnimatePresence>
+  );
+}
+
 export default function App() {
   const { theme, setUser } = useStore();
 
@@ -47,9 +79,11 @@ export default function App() {
       } else {
         setUser(null);
       }
+    }).catch((err) => {
+      console.warn("Supabase not configured or network error:", err);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const authListener = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser({
           uid: session.user.id,
@@ -62,7 +96,11 @@ export default function App() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      if (authListener && authListener.data && authListener.data.subscription) {
+         authListener.data.subscription.unsubscribe();
+      }
+    };
   }, [setUser]);
 
   useEffect(() => {
@@ -76,34 +114,23 @@ export default function App() {
   return (
     <Router>
       <div className="min-h-screen flex flex-col font-sans relative transition-colors duration-300 dark:bg-gray-900 bg-[#F9F7F2] overflow-x-hidden">
-        {/* Farm Ambient Glows */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0 fixed">
-          <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[50%] bg-orange-300/20 rounded-full blur-[120px]"></div>
-          <div className="absolute top-[20%] right-[-10%] w-[50%] h-[60%] bg-green-400/15 rounded-full blur-[120px]"></div>
-          <div className="absolute bottom-[-10%] left-[10%] w-[70%] h-[60%] bg-amber-400/15 rounded-full blur-[140px]"></div>
+        {/* Farm Ambient Glows - Optimized with will-change and removing fixed+absolute conflict */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+          <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[50%] bg-orange-300/15 rounded-full blur-[100px] will-change-transform transform-gpu"></div>
+          <div className="absolute top-[20%] right-[-10%] w-[50%] h-[60%] bg-green-400/10 rounded-full blur-[100px] will-change-transform transform-gpu"></div>
+          <div className="absolute bottom-[-10%] left-[10%] w-[70%] h-[60%] bg-amber-400/10 rounded-full blur-[120px] will-change-transform transform-gpu"></div>
         </div>
 
         {/* Diagonal Crop Rows Pattern */}
-        <div className="absolute inset-0 z-0 opacity-[0.04] pointer-events-none fixed" 
+        <div className="fixed inset-0 -z-10 opacity-[0.03] pointer-events-none" 
              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M24 12L12 24H0L24 0v12zM0 0h12L0 12V0z' fill='%23654321' fill-opacity='1' fill-rule='evenodd'/%3E%3C/svg%3E")` }}>
         </div>
         
-        <div className="relative z-10 flex flex-col min-h-screen backdrop-blur-[2px]">
+        <div className="relative z-10 flex flex-col min-h-screen">
           <Navbar />
           <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
             <Suspense fallback={<LoadingFallback />}>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/doctor" element={<CropDoctor />} />
-                <Route path="/agent" element={<Agent />} />
-                <Route path="/knowledge" element={<Knowledge />} />
-                <Route path="/schemes" element={<Schemes />} />
-                <Route path="/market" element={<Market />} />
-                <Route path="/consult" element={<Consultant />} />
-                <Route path="/budget" element={<Budget />} />
-                <Route path="/profile" element={<Profile />} />
-              </Routes>
+              <AnimatedRoutes />
             </Suspense>
           </main>
         </div>

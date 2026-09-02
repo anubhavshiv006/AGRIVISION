@@ -20,6 +20,15 @@ export function Navbar() {
     navigate(-1);
   };
 
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'hi' : 'en');
   };
@@ -65,13 +74,13 @@ export function Navbar() {
             </Link>
           </div>
           
-          <div className="hidden lg:flex items-center space-x-1">
+          <div className="hidden 2xl:flex items-center space-x-1">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
                 className={cn(
-                  "px-2 py-2 rounded-md text-sm font-bold transition-colors flex items-center gap-1.5",
+                  "px-2 py-2 rounded-md text-sm font-bold transition-colors flex items-center gap-1.5 whitespace-nowrap",
                   location.pathname === link.path 
                     ? "bg-green-50 text-green-700" 
                     : "text-gray-600 hover:bg-green-50/50 hover:text-green-700"
@@ -86,12 +95,12 @@ export function Navbar() {
               
               {/* PRO Status / Upgrade Button */}
               {isPro ? (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-100 to-orange-100 border border-amber-300 text-amber-800 text-sm font-bold shadow-sm cursor-default">
+                <div className="flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-100 to-orange-100 border border-amber-300 text-amber-800 text-sm font-bold shadow-sm cursor-default">
                   <Crown className="w-4 h-4 text-amber-600" />
                   {language === 'en' ? 'PRO Member' : 'प्रो सदस्य'}
                 </div>
               ) : (
-                <button onClick={() => setProModalOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 text-white text-sm font-bold hover:shadow-md transition-all">
+                <button onClick={() => setProModalOpen(true)} className="flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 text-white text-sm font-bold hover:shadow-md transition-all">
                   <Crown className="w-4 h-4" />
                   {language === 'en' ? 'Go PRO' : 'प्रो अपग्रेड'}
                 </button>
@@ -137,18 +146,18 @@ export function Navbar() {
               <div className="flex items-center gap-2">
                 <Link to="/profile" className="w-9 h-9 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-full transition-colors overflow-hidden border border-transparent hover:border-gray-200">
                   {user?.photoURL || profile?.photoUrl ? (
-                    <img src={user?.photoURL || profile?.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+                    <img src={user?.photoURL || profile?.photoUrl} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
                     <User className="w-5 h-5" />
                   )}
                 </Link>
                 {user ? (
-                  <button onClick={() => supabase.auth.signOut()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-red-600 text-sm font-bold hover:bg-red-50 transition-colors shadow-sm">
+                  <button onClick={handleLogout} className="flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 rounded-lg border border-red-200 text-red-600 text-sm font-bold hover:bg-red-50 transition-colors shadow-sm">
                     <LogOut className="w-4 h-4" />
                     {language === 'en' ? 'Logout' : 'लॉग आउट'}
                   </button>
                 ) : (
-                  <button onClick={() => setIsAuthModalOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-colors shadow-sm">
+                  <button onClick={() => setIsAuthModalOpen(true)} className="flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-colors shadow-sm">
                     <LogIn className="w-4 h-4" />
                     {language === 'en' ? 'Sign In' : 'साइन इन'}
                   </button>
@@ -174,12 +183,12 @@ export function Navbar() {
             </div>
           </div>
 
-          <div className="flex items-center lg:hidden gap-1 sm:gap-3">
+          <div className="flex items-center 2xl:hidden gap-1 sm:gap-3">
             {/* Mobile Profile/Auth Link */}
             <div className="flex items-center gap-1 sm:gap-2">
               <Link to="/profile" className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-full transition-colors overflow-hidden border border-transparent hover:border-gray-200 shrink-0">
                 {user?.photoURL || profile?.photoUrl ? (
-                  <img src={user?.photoURL || profile?.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+                  <img src={user?.photoURL || profile?.photoUrl} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
                   <User className="w-4 h-4 sm:w-5 sm:h-5" />
                 )}
@@ -187,6 +196,11 @@ export function Navbar() {
               {!user && (
                 <button onClick={() => setIsAuthModalOpen(true)} className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-emerald-600 hover:bg-emerald-50 rounded-full transition-colors overflow-hidden shrink-0">
                   <LogIn className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              )}
+              {user && (
+                <button onClick={handleLogout} className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-full transition-colors overflow-hidden shrink-0" title="Logout">
+                  <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               )}
             </div>
@@ -237,7 +251,7 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {isOpen && (
-        <div className="lg:hidden border-t border-gray-100 bg-white shadow-lg absolute w-full left-0">
+        <div className="2xl:hidden border-t border-gray-100 bg-white shadow-lg absolute w-full left-0">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             {navLinks.map((link) => (
               <Link
@@ -296,7 +310,7 @@ export function Navbar() {
               <button
                 onClick={() => {
                   setIsOpen(false);
-                  supabase.auth.signOut();
+                  handleLogout();
                 }}
                 className="w-full text-left block px-3 py-3 rounded-md text-base font-bold flex items-center gap-3 text-red-600 hover:bg-red-50"
               >
