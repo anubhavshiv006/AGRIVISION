@@ -1,12 +1,12 @@
 import { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import { Camera, Upload, AlertCircle, CheckCircle2, ChevronRight, X, AlertTriangle, Bot } from 'lucide-react';
+import { Camera, Upload, AlertCircle, CheckCircle2, ChevronRight, X, AlertTriangle, Bot, Leaf, FlaskConical, Stethoscope, ShieldCheck } from 'lucide-react';
 import Webcam from 'react-webcam';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 
-const CROPS = ['Wheat', 'Rice', 'Maize/Corn', 'Tomato', 'Potato', 'Cotton', 'Soybean'];
-const CROPS_HI = ['गेहूं', 'चावल', 'मक्का', 'टमाटर', 'आलू', 'कपास', 'सोयाबीन'];
+const CROPS = ['Auto Detect (AI)', 'Wheat', 'Rice', 'Maize/Corn', 'Tomato', 'Potato', 'Cotton', 'Soybean'];
+const CROPS_HI = ['स्वत: पहचान (AI)', 'गेहूं', 'चावल', 'मक्का', 'टमाटर', 'आलू', 'कपास', 'सोयाबीन'];
 
 export default function CropDoctor() {
   const { language, addHistory } = useStore();
@@ -18,45 +18,81 @@ export default function CropDoctor() {
   const [showWebcam, setShowWebcam] = useState(false);
   const webcamRef = useRef<Webcam>(null);
   
-  const [cropType, setCropType] = useState('Wheat');
+  const [cropType, setCropType] = useState('Auto Detect (AI)');
   const [symptoms, setSymptoms] = useState('');
   
   const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState('');
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      setFile(selectedFile);
-      setPreview(URL.createObjectURL(selectedFile));
-      setResult(null);
-      setError('');
-    }
-  };
+  const loadingMessagesEn = ['Uploading Image...', 'AI is scanning symptoms...', 'Generating treatment plan...', 'Finalizing results...'];
+  const loadingMessagesHi = ['छवि अपलोड हो रही है...', 'एआई लक्षणों की जांच कर रहा है...', 'उपचार योजना बन रही है...', 'परिणाम तैयार हो रहे हैं...'];
 
-  const capture = () => {
-    const imageSrc = webcamRef.current?.getScreenshot();
-    if (imageSrc) {
-      // Convert base64 to file
-      fetch(imageSrc)
-        .then(res => res.blob())
-        .then(blob => {
-          const f = new File([blob], "camera-capture.jpg", { type: "image/jpeg" });
-          setFile(f);
-          setPreview(imageSrc);
-          setShowWebcam(false);
-          setResult(null);
-          setError('');
-        });
-    }
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+              } else {
+                resolve(file);
+              }
+            },
+            'image/jpeg',
+            0.6
+          );
+        };
+        img.onerror = () => resolve(file);
+      };
+      reader.onerror = () => resolve(file);
+    });
   };
 
   const analyzeImage = async () => {
     if (!file) return;
     setLoading(true);
+    setLoadingText(isEn ? loadingMessagesEn[0] : loadingMessagesHi[0]);
     setError('');
     setResult(null);
+
+    // Cycle through messages while loading
+    let msgIndex = 0;
+    const interval = setInterval(() => {
+      msgIndex++;
+      if (msgIndex < loadingMessagesEn.length) {
+        setLoadingText(isEn ? loadingMessagesEn[msgIndex] : loadingMessagesHi[msgIndex]);
+      }
+    }, 1500);
 
     const formData = new FormData();
     formData.append('image', file);
@@ -70,7 +106,10 @@ export default function CropDoctor() {
         body: formData,
       });
 
-      if (!res.ok) throw new Error('Failed to analyze image');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.error || 'Failed to analyze image');
+      }
       
       const data = await res.json();
       setResult(data);
@@ -89,9 +128,45 @@ export default function CropDoctor() {
         });
       }
     } catch (err: any) {
-      setError(isEn ? 'Analysis failed. Please try again later.' : 'विश्लेषण विफल रहा। कृपया बाद में पुनः प्रयास करें।');
+      console.error(err);
+      const errorMsg = err.message || (isEn ? 'Analysis failed. Please try again later.' : 'विश्लेषण विफल रहा। कृपया बाद में पुनः प्रयास करें।');
+      setError(errorMsg);
     } finally {
+      clearInterval(interval);
       setLoading(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      setPreview(URL.createObjectURL(selectedFile));
+      setResult(null);
+      setError('');
+      
+      try {
+        const compressed = await compressImage(selectedFile);
+        setFile(compressed);
+      } catch (err) {
+        setFile(selectedFile);
+      }
+    }
+  };
+
+  const capture = () => {
+    const imageSrc = webcamRef.current?.getScreenshot();
+    if (imageSrc) {
+      // Convert base64 to file
+      fetch(imageSrc)
+        .then(res => res.blob())
+        .then(blob => {
+          const f = new File([blob], "camera-capture.jpg", { type: "image/jpeg" });
+          setFile(f);
+          setPreview(imageSrc);
+          setShowWebcam(false);
+          setResult(null);
+          setError('');
+        });
     }
   };
 
@@ -220,10 +295,12 @@ export default function CropDoctor() {
                 className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-70 text-white font-bold text-lg py-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
               >
                 {loading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    {isEn ? 'Analyzing Crop...' : 'फसल का विश्लेषण कर रहा है...'}
-                  </>
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>{loadingText || (isEn ? 'Analyzing...' : 'विश्लेषण कर रहा है...')}</span>
+                    </div>
+                  </div>
                 ) : (
                   <>
                     <CheckCircle2 className="w-5 h-5" />
@@ -269,7 +346,12 @@ export default function CropDoctor() {
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-6 border-b border-gray-100">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">{result.possibleProblem}</h2>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    {result.detectedObject && (
+                      <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                        {isEn ? 'Detected: ' : 'पता चला: '}{result.detectedObject}
+                      </span>
+                    )}
                     <span className={cn(
                       "px-3 py-1 rounded-full text-sm font-bold",
                       result.confidence === 'High' ? "bg-green-100 text-green-700" :
@@ -278,16 +360,50 @@ export default function CropDoctor() {
                     )}>
                       {isEn ? `${result.confidence} Confidence` : `${result.confidence} आत्मविश्वास`}
                     </span>
+                    {result.severity && result.severity !== 'None' && (
+                      <span className={cn(
+                        "px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1",
+                        result.severity === 'High' ? "bg-red-100 text-red-700" :
+                        result.severity === 'Medium' ? "bg-orange-100 text-orange-700" :
+                        "bg-yellow-100 text-yellow-700"
+                      )}>
+                        <AlertTriangle className="w-4 h-4" />
+                        {isEn ? `${result.severity} Severity` : `${result.severity} गंभीरता`}
+                      </span>
+                    )}
+                    {result.diseaseStage && result.diseaseStage !== 'None' && (
+                      <span className="px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 bg-purple-100 text-purple-700">
+                        <Stethoscope className="w-4 h-4" />
+                        {result.diseaseStage}
+                      </span>
+                    )}
                   </div>
                 </div>
                 
-                <button 
-                  onClick={() => navigate('/agent', { state: { initialPrompt: `I just analyzed my ${cropType} and the AI suspects ${result.possibleProblem}. What should I do?` } })}
-                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-colors"
-                >
-                  <Bot className="w-5 h-5" />
-                  {isEn ? 'Discuss with AI Agent' : 'एआई एजेंट से चर्चा करें'}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => {
+                      if ('speechSynthesis' in window) {
+                        const utterance = new SpeechSynthesisUtterance(
+                          isEn ? `The AI suspects ${result.possibleProblem}. Confidence is ${result.confidence}.` 
+                               : `एआई को ${result.possibleProblem} का संदेह है।`
+                        );
+                        utterance.lang = isEn ? 'en-US' : 'hi-IN';
+                        window.speechSynthesis.speak(utterance);
+                      }
+                    }}
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-medium transition-colors"
+                  >
+                    🔊
+                  </button>
+                  <button 
+                    onClick={() => navigate('/agent', { state: { initialPrompt: `I just analyzed my ${cropType} and the AI suspects ${result.possibleProblem}. What should I do?` } })}
+                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-colors"
+                  >
+                    <Bot className="w-5 h-5" />
+                    {isEn ? 'Discuss with AI Agent' : 'एआई एजेंट से चर्चा करें'}
+                  </button>
+                </div>
               </div>
 
               {result.confidence === 'Low' && (
@@ -322,13 +438,50 @@ export default function CropDoctor() {
                 </div>
                 
                 <div className="space-y-6 bg-gray-50 p-6 rounded-2xl">
+                  {result.organicTreatments?.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-bold text-green-800 mb-3 flex items-center gap-2">
+                        <Leaf className="w-5 h-5" />
+                        {isEn ? 'Organic Treatments' : 'जैविक उपचार'}
+                      </h3>
+                      <ul className="space-y-3">
+                        {result.organicTreatments.map((s: string, i: number) => (
+                          <li key={i} className="flex gap-3 text-gray-700 bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+                            <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+                            <span>{s}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {result.chemicalTreatments?.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-bold text-orange-800 mb-3 flex items-center gap-2 mt-6">
+                        <FlaskConical className="w-5 h-5" />
+                        {isEn ? 'Chemical Treatments (Use Carefully)' : 'रासायनिक उपचार (सावधानी से उपयोग करें)'}
+                      </h3>
+                      <ul className="space-y-3">
+                        {result.chemicalTreatments.map((s: string, i: number) => (
+                          <li key={i} className="flex gap-3 text-gray-700 bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+                            <ShieldCheck className="w-5 h-5 text-orange-500 shrink-0" />
+                            <span>{s}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   {result.nextSteps?.length > 0 && (
                     <div>
-                      <h3 className="text-lg font-bold text-green-800 mb-3">{isEn ? 'Recommended Next Steps' : 'अनुशंसित अगले कदम'}</h3>
+                      <h3 className="text-lg font-bold text-blue-800 mb-3 flex items-center gap-2 mt-6">
+                        <ChevronRight className="w-5 h-5" />
+                        {isEn ? 'General Next Steps' : 'अगले कदम'}
+                      </h3>
                       <ul className="space-y-3">
                         {result.nextSteps.map((s: string, i: number) => (
                           <li key={i} className="flex gap-3 text-gray-700 bg-white p-3 rounded-lg shadow-sm border border-gray-100">
-                            <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+                            <CheckCircle2 className="w-5 h-5 text-blue-500 shrink-0" />
                             <span>{s}</span>
                           </li>
                         ))}

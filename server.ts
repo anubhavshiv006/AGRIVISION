@@ -46,40 +46,56 @@ async function startServer() {
         "Please respond in Hindi (हिंदी). Ensure the language is natural and easy to understand for an Indian farmer." : 
         "Please respond in English. Ensure the language is simple and easy to understand for a farmer.";
 
-      const prompt = `You are an expert AI Crop Doctor (KisanMitra). Analyze the provided image of a ${cropType} crop.
+      const isAutoDetect = cropType === 'Auto Detect (AI)' || cropType === 'स्वत: पहचान (AI)';
+      const cropContextPrompt = isAutoDetect 
+        ? "The user doesn't know the exact crop type. You MUST auto-detect the specific crop species from the image." 
+        : `Analyze the provided image of a ${cropType} crop.`;
+
+      const prompt = `You are an expert AI Crop Doctor (KisanMitra). ${cropContextPrompt}
 The user has reported the following symptoms (if any): ${symptoms || "None reported"}.
 
-First, check if the image is actually a valid plant/crop image. If it is completely unrelated, too dark, or too blurry to identify anything, set isImageValid to false and provide a helpful message on how to take a better picture.
+First, strictly detect what is actually in the image. 
+- Is it a crop, a leaf, a stem, a fruit, or a field?
+- Or is it something completely unrelated (like a human face/selfie, an animal, a car, furniture, a random object), or too dark/blurry?
 
-If it is a valid crop image, analyze it for diseases, pests, or nutrient deficiencies.
+If the image is NOT of a plant/crop, you MUST set "isImageValid" to false, identify what it is in "detectedObject", and set "invalidMessage" explaining that you detected a [detectedObject] and the user needs to upload a clear photo of a crop, leaf, or fruit.
+
+If it IS a valid crop image, set "isImageValid" to true and analyze it deeply for diseases, pests, or nutrient deficiencies.
+Identify the "detectedObject" (e.g., "Tomato Leaf", "Wheat Field", "Mango Fruit").
+Provide an assessment of the "severity" (Low, Medium, High).
 Respond with structured data.
 
 IMPORTANT SAFETY BEHAVIOR:
 - Do NOT make the AI claim that a disease diagnosis is certain. Use words like "Possible", "Likely", "Suspected".
-- If you are not confident, set confidence to "Low" and explicitly state that the image is not clear enough or the symptoms are ambiguous, and recommend expert consultation.
-- Do not provide unsafe or blindly confident pesticide/chemical dosage instructions. Recommend general safe practices and consulting a local expert/KVK for specific chemical controls.
+- If you are not confident, set confidence to "Low" and explicitly state that the image is not clear enough.
+- Do not provide unsafe or blindly confident pesticide/chemical dosage instructions. Recommend general safe practices and consulting a local expert.
 
 ${langContext}`;
 
       const responseSchema = {
         type: Type.OBJECT,
         properties: {
-          isImageValid: { type: Type.BOOLEAN, description: "True if the image is a valid, analyzable crop/plant image. False if unrelated, too dark, or too blurry." },
-          invalidMessage: { type: Type.STRING, description: "Helpful message if the image is invalid, explaining why and how to take a better picture." },
+          isImageValid: { type: Type.BOOLEAN, description: "True if the image is a valid, analyzable crop/plant image. False if unrelated (e.g., selfie, car, animal), too dark, or too blurry." },
+          detectedObject: { type: Type.STRING, description: "What exactly did the AI detect in the image? e.g., 'Human face', 'Car', 'Tomato Leaf', 'Wheat Field', 'Mango Fruit'." },
+          invalidMessage: { type: Type.STRING, description: "Helpful message if the image is invalid, explaining what was detected and how to take a better picture of a crop." },
           possibleProblem: { type: Type.STRING, description: "The suspected disease, pest, or condition. If healthy, state 'Appears Healthy'." },
+          diseaseStage: { type: Type.STRING, description: "Estimated stage of the disease/pest attack. One of: 'Early Stage', 'Mid Stage', 'Advanced Stage', 'None' (if healthy)." },
+          severity: { type: Type.STRING, description: "The severity of the problem. One of: 'None', 'Low', 'Medium', 'High'" },
           confidence: { type: Type.STRING, description: "One of: 'High', 'Moderate', 'Low'" },
           visibleSymptoms: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of symptoms observed in the image." },
           possibleCauses: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of possible causes for these symptoms." },
+          organicTreatments: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of organic, natural, and cultural treatments or immediate actions to stop the spread." },
+          chemicalTreatments: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of safe chemical treatments or fertilizers (generic names, not brands), with a warning to consult experts." },
           nextSteps: { type: Type.ARRAY, items: { type: Type.STRING }, description: "General safe next steps for the farmer." },
           preventionTips: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Tips to prevent this in the future." },
           expertRecommendation: { type: Type.STRING, description: "When and why to consult an agricultural expert." }
         },
-        required: ["isImageValid"]
+        required: ["isImageValid", "detectedObject"]
       };
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
-        contents: [imagePart, prompt],
+        model: "gemini-3.8-flash",
+        contents: [imagePart, { text: prompt }],
         config: {
           responseMimeType: "application/json",
           responseSchema: responseSchema
@@ -116,7 +132,7 @@ Clearly communicate uncertainty. Do not provide dangerous chemical dosages witho
       }));
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
+        model: "gemini-3.8-flash",
         contents: contents,
         config: {
           systemInstruction: systemInstruction
@@ -152,7 +168,7 @@ ${langContext}`;
       };
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
+        model: "gemini-3.8-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
