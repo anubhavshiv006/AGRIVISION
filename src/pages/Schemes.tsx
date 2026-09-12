@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { Landmark, FileText, CheckCircle2, IndianRupee, ShieldCheck, Tractor, Droplets, ArrowRight } from 'lucide-react';
+import { useWeb3Store } from '../store/useWeb3Store';
+import { Landmark, FileText, CheckCircle2, IndianRupee, ShieldCheck, Tractor, Droplets, ArrowRight, Cpu, CloudRain, Sparkles, ExternalLink, Zap, Check } from 'lucide-react';
 
 const SCHEMES = [
   {
@@ -72,7 +74,26 @@ const SCHEMES = [
 
 export default function Schemes() {
   const { language } = useStore();
+  const { insurancePolicies, purchaseInsurance, triggerInsuranceClaim, isConnected, connectSmartWallet } = useWeb3Store();
   const isEn = language === 'en';
+
+  const [cropType, setCropType] = useState('Rice (Paddy)');
+  const [region, setRegion] = useState('North Punjab');
+  const [coverageUSDT, setCoverageUSDT] = useState('1000');
+  const [isBuying, setIsBuying] = useState(false);
+
+  const handlePurchase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsBuying(true);
+    try {
+      if (!isConnected) connectSmartWallet();
+      await purchaseInsurance(cropType, region, parseFloat(coverageUSDT));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsBuying(false);
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-16">
@@ -81,13 +102,127 @@ export default function Schemes() {
           <Landmark className="w-10 h-10 text-orange-600" />
         </div>
         <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
-          {isEn ? 'Government Schemes for Farmers' : 'किसानों के लिए सरकारी योजनाएं'}
+          {isEn ? 'Government Schemes & Web3 Insurance' : 'सरकारी योजनाएं और वेब3 बीमा'}
         </h1>
         <p className="text-gray-600 max-w-2xl mx-auto text-lg">
           {isEn 
-            ? 'Explore prominent central government schemes designed to support agricultural activities, provide financial security, and promote modern farming.'
-            : 'कृषि गतिविधियों का समर्थन करने, वित्तीय सुरक्षा प्रदान करने और आधुनिक खेती को बढ़ावा देने के लिए बनाई गई प्रमुख केंद्र सरकार की योजनाओं का अन्वेषण करें।'}
+            ? 'Explore central government schemes and decentralized Smart Contract weather insurance powered by Chainlink Oracles.'
+            : 'केंद्र सरकार की योजनाओं और चेनलिंक ओरेकल द्वारा संचालित विकेंद्रीकृत स्मार्ट अनुबंध मौसम बीमा का अन्वेषण करें।'}
         </p>
+      </div>
+
+      {/* Web3 Parametric Weather Insurance Banner */}
+      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-6 md:p-8 rounded-3xl border border-blue-500/40 shadow-xl space-y-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-blue-500/30 pb-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3.5 bg-blue-500/20 border border-blue-400/30 rounded-2xl">
+              <CloudRain className="w-8 h-8 text-blue-300" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black flex items-center gap-2">
+                Chainlink Oracle Parametric Weather Insurance
+                <span className="text-xs bg-blue-500 text-white font-bold px-2.5 py-0.5 rounded-full">Automated Payouts</span>
+              </h2>
+              <p className="text-xs text-blue-200 mt-1">
+                Zero paperwork. Smart Contracts monitor satellite rainfall & drought feeds. Instant claim payouts triggered to your Web3 wallet when drought occurs.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Purchase Policy Form & Active Policies */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Form */}
+          <form onSubmit={handlePurchase} className="bg-blue-950/60 border border-blue-500/30 p-5 rounded-2xl space-y-4">
+            <h3 className="text-sm font-bold text-blue-200 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-400" />
+              Subscribe Web3 Policy (3% Premium)
+            </h3>
+            
+            <div>
+              <label className="block text-xs text-blue-300 mb-1">Crop Type</label>
+              <select
+                value={cropType}
+                onChange={(e) => setCropType(e.target.value)}
+                className="w-full bg-slate-900 border border-blue-500/40 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none"
+              >
+                <option value="Rice (Paddy)">Rice (Paddy)</option>
+                <option value="Wheat">Wheat</option>
+                <option value="Cotton">Cotton</option>
+                <option value="Soybean">Soybean</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs text-blue-300 mb-1">Farm Region</label>
+              <input
+                type="text"
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+                className="w-full bg-slate-900 border border-blue-500/40 rounded-xl px-3 py-2 text-xs text-white outline-none font-medium"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-blue-300 mb-1">Coverage Amount ($USDT)</label>
+              <input
+                type="number"
+                value={coverageUSDT}
+                onChange={(e) => setCoverageUSDT(e.target.value)}
+                className="w-full bg-slate-900 border border-blue-500/40 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none"
+              />
+              <span className="text-[10px] text-blue-300 mt-1 block">Premium: ${Math.round(parseFloat(coverageUSDT || '0') * 0.03)} USDC</span>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isBuying}
+              className="w-full py-2.5 bg-blue-500 hover:bg-blue-600 text-white font-extrabold text-xs rounded-xl shadow transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+            >
+              {isBuying ? 'Activating Policy...' : 'Activate Smart Contract Insurance'}
+            </button>
+          </form>
+
+          {/* Active Policies List */}
+          <div className="lg:col-span-2 space-y-4">
+            <h3 className="text-sm font-bold text-blue-200">Active Web3 Parametric Policies</h3>
+            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+              {insurancePolicies.map((pol) => (
+                <div key={pol.id} className="bg-slate-900/90 border border-blue-500/30 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-white text-sm">{pol.cropType} Insurance</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${pol.status === 'Active' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-blue-500/20 text-blue-300'}`}>
+                        {pol.status}
+                      </span>
+                    </div>
+                    <div className="text-blue-300 text-[11px] mt-1">
+                      Region: {pol.region} | Contract: <code className="text-blue-200">{pol.contractAddress.substring(0, 10)}...</code>
+                    </div>
+                    <div className="text-slate-400 text-[10px] mt-1">
+                      Oracle Rainfall Trigger: &lt;{pol.triggerRainfallMm}mm (Current: {pol.currentRainfallMm}mm)
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                    <div className="text-right">
+                      <div className="text-sm font-black text-emerald-400">${pol.coveredAmount} USDT</div>
+                      <div className="text-[10px] text-blue-300">Premium Paid: ${pol.premium}</div>
+                    </div>
+                    {pol.status === 'Active' && (
+                      <button
+                        onClick={() => triggerInsuranceClaim(pol.id)}
+                        className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-[11px] shadow transition-colors shrink-0"
+                      >
+                        Simulate Drought Oracle Claim
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       

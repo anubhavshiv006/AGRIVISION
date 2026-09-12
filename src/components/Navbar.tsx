@@ -1,6 +1,9 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { Leaf, Menu, X, Globe, User, Home, Stethoscope, MessageSquare, BookOpen, LayoutDashboard, Landmark, Store, Wallet, Bell, ArrowLeft, Sun, Moon, LogIn, LogOut, Crown, PhoneCall } from 'lucide-react';
+import { useWeb3Store } from '../store/useWeb3Store';
+import { Web3WalletModal } from './Web3WalletModal';
+import { shortenAddress } from '../lib/web3';
+import { Leaf, Menu, X, Globe, User, Home, Stethoscope, MessageSquare, BookOpen, LayoutDashboard, Landmark, Store, Wallet, Bell, ArrowLeft, Sun, Moon, LogIn, LogOut, Crown, PhoneCall, Cpu, Coins } from 'lucide-react';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '../lib/utils';
@@ -10,6 +13,7 @@ import { ProModal } from './ProModal';
 
 export function Navbar() {
   const { language, setLanguage, notifications, markNotificationsRead, profile, theme, toggleTheme, user, setProModalOpen, isPro } = useStore();
+  const { agriBalance, isConnected, walletAddress, setWalletModalOpen } = useWeb3Store();
   const [isOpen, setIsOpen] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -105,6 +109,23 @@ export function Navbar() {
                   {language === 'en' ? 'Go PRO' : 'प्रो अपग्रेड'}
                 </button>
               )}
+
+              {/* Web3 Wallet & AGRI Token Button */}
+              <button
+                onClick={() => setWalletModalOpen(true)}
+                className={cn(
+                  "flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 rounded-lg text-sm font-bold transition-all shadow-sm border",
+                  isConnected
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100"
+                    : "bg-gradient-to-r from-emerald-600 to-teal-700 text-white hover:from-emerald-700 hover:to-teal-800 border-transparent"
+                )}
+              >
+                <Cpu className="w-4 h-4 text-emerald-400" />
+                <span>{isConnected ? shortenAddress(walletAddress || '') : (language === 'en' ? 'Web3 Wallet' : 'वेब3 वॉलेट')}</span>
+                <span className="bg-emerald-700/30 dark:bg-emerald-900/40 text-emerald-900 dark:text-emerald-200 text-xs px-2 py-0.5 rounded-full font-black">
+                  {agriBalance} $AGRI
+                </span>
+              </button>
 
               {/* Notifications */}
               <div className="relative">
@@ -324,6 +345,7 @@ export function Navbar() {
 
       {createPortal(<AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />, document.body)}
       {createPortal(<ProModal />, document.body)}
+      {createPortal(<Web3WalletModal />, document.body)}
     </nav>
   );
 }

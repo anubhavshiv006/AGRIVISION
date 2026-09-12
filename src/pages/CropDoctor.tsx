@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import { Camera, Upload, AlertCircle, CheckCircle2, ChevronRight, X, AlertTriangle, Bot } from 'lucide-react';
+import { useWeb3Store } from '../store/useWeb3Store';
+import { Camera, Upload, AlertCircle, CheckCircle2, ChevronRight, X, AlertTriangle, Bot, Cpu, Sparkles, ExternalLink, ShieldCheck } from 'lucide-react';
 import Webcam from 'react-webcam';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -10,6 +11,7 @@ const CROPS_HI = ['गेहूं', 'चावल', 'मक्का', 'टम�
 
 export default function CropDoctor() {
   const { language, addHistory } = useStore();
+  const { mintCropNFT, isConnected, connectSmartWallet } = useWeb3Store();
   const navigate = useNavigate();
   const isEn = language === 'en';
   
@@ -24,6 +26,30 @@ export default function CropDoctor() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
+
+  const [isMinting, setIsMinting] = useState(false);
+  const [mintedNFT, setMintedNFT] = useState<any>(null);
+
+  const handleMintNFT = async () => {
+    if (!result) return;
+    setIsMinting(true);
+    try {
+      if (!isConnected) {
+        connectSmartWallet();
+      }
+      const nft = await mintCropNFT(
+        cropType,
+        result.possibleProblem || 'Diagnosed Crop',
+        result.confidence || 'High',
+        preview || undefined
+      );
+      setMintedNFT(nft);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsMinting(false);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -336,6 +362,81 @@ export default function CropDoctor() {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Web3 Crop Passport & Data-to-Earn Rewards Card */}
+              <div className="bg-gradient-to-r from-emerald-900 to-teal-900 text-white p-6 rounded-2xl border border-emerald-500/40 shadow-xl space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-emerald-500/20 border border-emerald-400/30 rounded-xl">
+                      <Cpu className="w-6 h-6 text-emerald-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-extrabold flex items-center gap-2">
+                        Web3 Crop Passport & Data-to-Earn
+                        <span className="text-xs bg-emerald-400 text-emerald-950 font-black px-2.5 py-0.5 rounded-full uppercase">
+                          +50 $AGRI
+                        </span>
+                      </h3>
+                      <p className="text-xs text-emerald-200">
+                        {isEn
+                          ? 'Mint an immutable On-Chain NFT Passport on Polygon to prove crop health and earn $AGRI token rewards.'
+                          : 'फसल स्वास्थ्य साबित करने और $AGRI टोकन पुरस्कार प्राप्त करने के लिए बहुभुज पर एक अटूट ऑन-चेन एनएफटी पासपोर्ट मिंट करें।'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {!mintedNFT ? (
+                    <button
+                      onClick={handleMintNFT}
+                      disabled={isMinting}
+                      className="px-5 py-3 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-emerald-950 font-black rounded-xl shadow-lg transition-all flex items-center gap-2 shrink-0 disabled:opacity-50"
+                    >
+                      {isMinting ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-emerald-950/30 border-t-emerald-950 rounded-full animate-spin" />
+                          Minting NFT...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-5 h-5" />
+                          Mint NFT Passport
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2 bg-emerald-950/80 border border-emerald-500/50 px-4 py-2 rounded-xl text-emerald-300 text-xs font-bold">
+                      <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                      NFT Passport Minted!
+                    </div>
+                  )}
+                </div>
+
+                {mintedNFT && (
+                  <div className="bg-emerald-950/60 border border-emerald-500/30 rounded-xl p-4 space-y-3 text-xs">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <div className="text-emerald-400 font-medium">NFT Name</div>
+                        <div className="font-bold text-white text-sm">{mintedNFT.name}</div>
+                      </div>
+                      <div>
+                        <div className="text-emerald-400 font-medium">IPFS Content Identifier (CID)</div>
+                        <div className="font-mono text-emerald-200 truncate">{mintedNFT.ipfsCid}</div>
+                      </div>
+                      <div>
+                        <div className="text-emerald-400 font-medium">On-Chain Tx Hash</div>
+                        <a
+                          href={mintedNFT.explorerUrl || `https://amoy.polygonscan.com/tx/${mintedNFT.mintTxHash}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-teal-300 hover:underline flex items-center gap-1 font-mono truncate"
+                        >
+                          {mintedNFT.mintTxHash.substring(0, 14)}... <ExternalLink className="w-3 h-3 shrink-0" />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Responsible AI Disclaimer */}

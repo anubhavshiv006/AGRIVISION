@@ -1,15 +1,45 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { UserCircle, Save, MapPin, Phone, Ruler, Camera, Crown, LogOut } from 'lucide-react';
+import { useWeb3Store } from '../store/useWeb3Store';
+import { UserCircle, Save, MapPin, Phone, Ruler, Camera, Crown, LogOut, Cpu, ShieldCheck, Award, Sparkles, ExternalLink, Coins } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 
 export default function Profile() {
   const { language, profile, updateProfile, user, isPro } = useStore();
+  const {
+    walletAddress,
+    isConnected,
+    onChainCreditScore,
+    agriBalance,
+    soulboundBadges,
+    nfts,
+    mintSoulboundBadge,
+    connectSmartWallet
+  } = useWeb3Store();
+
   const isEn = language === 'en';
   const navigate = useNavigate();
-  
+
+  const [isMintingSBT, setIsMintingSBT] = useState(false);
+
+  const handleMintOrganicSBT = async () => {
+    setIsMintingSBT(true);
+    try {
+      if (!isConnected) connectSmartWallet();
+      await mintSoulboundBadge(
+        'Organic Farming Master',
+        'Verified chemical-free sustainable farming practices on Polygon',
+        'Organic Certified'
+      );
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsMintingSBT(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -273,6 +303,84 @@ export default function Profile() {
               </button>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Web3 Agri-Identity & Soulbound Reputation Badges (SBT) */}
+      <div className="bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-950 text-white rounded-3xl p-6 md:p-8 border border-emerald-500/40 shadow-xl space-y-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-emerald-500/30 pb-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3.5 bg-emerald-500/20 border border-emerald-400/30 rounded-2xl">
+              <ShieldCheck className="w-8 h-8 text-emerald-400" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black flex items-center gap-2">
+                Web3 Farmer Identity & Soulbound Badges (SBT)
+              </h2>
+              <p className="text-xs text-emerald-200 mt-1">
+                Non-transferable on-chain reputation tokens representing your verified agricultural achievements, credit score, and farm history.
+              </p>
+            </div>
+          </div>
+          <div className="bg-emerald-900/60 border border-emerald-500/30 px-4 py-2.5 rounded-2xl text-right">
+            <div className="text-[10px] text-emerald-300 font-bold uppercase">On-Chain Credit Score</div>
+            <div className="text-xl font-black text-emerald-400">{onChainCreditScore} / 850</div>
+          </div>
+        </div>
+
+        {/* Soulbound Badges Showcase */}
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-base font-bold text-emerald-300 flex items-center gap-2">
+              <Award className="w-5 h-5 text-emerald-400" />
+              Verified Soulbound Badges ({soulboundBadges.length})
+            </h3>
+            <button
+              onClick={handleMintOrganicSBT}
+              disabled={isMintingSBT}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs rounded-xl shadow transition-all flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <Sparkles className="w-4 h-4" />
+              {isMintingSBT ? 'Minting SBT...' : 'Mint Organic Farming SBT'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {soulboundBadges.map((sbt) => (
+              <div
+                key={sbt.id}
+                className="bg-slate-900/90 border border-emerald-500/30 rounded-2xl p-4 flex items-start gap-4 hover:border-emerald-500/60 transition-all"
+              >
+                <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30 shrink-0">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <div className="space-y-1 text-xs">
+                  <div className="font-extrabold text-white text-sm flex items-center justify-between">
+                    <span>{sbt.title}</span>
+                    <span className="text-[10px] text-emerald-400 font-mono">Token #{sbt.tokenId}</span>
+                  </div>
+                  <p className="text-emerald-200">{sbt.description}</p>
+                  <div className="text-[10px] text-slate-400 pt-1">
+                    Minted: {new Date(sbt.mintedAt).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Minted Crop NFT Passports Count */}
+        <div className="bg-slate-900/60 border border-emerald-500/20 rounded-2xl p-4 flex justify-between items-center text-xs">
+          <div className="flex items-center gap-3">
+            <Cpu className="w-5 h-5 text-emerald-400" />
+            <div>
+              <div className="font-bold text-white">Minted Crop Passports</div>
+              <div className="text-emerald-300 text-[11px]">{nfts.length} On-Chain Passports on IPFS</div>
+            </div>
+          </div>
+          <div className="text-right font-black text-emerald-400 text-sm">
+            {agriBalance} $AGRI Tokens
+          </div>
         </div>
       </div>
 

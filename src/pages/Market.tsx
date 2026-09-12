@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { ShoppingBag, MapPin, Tractor, Search, Star, ExternalLink, Leaf, Bug, Zap, TrendingUp } from 'lucide-react';
+import { useWeb3Store } from '../store/useWeb3Store';
+import { ShoppingBag, MapPin, Tractor, Search, Star, ExternalLink, Leaf, Bug, Zap, TrendingUp, Cpu, ShieldCheck, CheckCircle2, Lock, ArrowUpRight, PlusCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -29,15 +30,44 @@ const MANDI_PRICES = [
 
 export default function Market() {
   const { language } = useStore();
+  const { escrows, createEscrow, releaseEscrow, walletAddress, isConnected, connectSmartWallet } = useWeb3Store();
   const isEn = language === 'en';
-  const [activeTab, setActiveTab] = useState<'suggestions' | 'online' | 'nearby' | 'prices' | 'rentals'>('suggestions');
+  const [activeTab, setActiveTab] = useState<'suggestions' | 'online' | 'nearby' | 'prices' | 'rentals' | 'web3_escrow'>('suggestions');
+
+  // Escrow Form State
+  const [escrowCrop, setEscrowCrop] = useState('');
+  const [escrowSeller, setEscrowSeller] = useState('');
+  const [escrowAmount, setEscrowAmount] = useState('250');
+  const [escrowSymbol, setEscrowSymbol] = useState<'USDC' | 'MATIC' | 'AGRI'>('USDC');
+  const [isCreatingEscrow, setIsCreatingEscrow] = useState(false);
+
+  const handleCreateEscrow = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!escrowCrop || !escrowAmount) return;
+    setIsCreatingEscrow(true);
+    try {
+      if (!isConnected) connectSmartWallet();
+      await createEscrow(
+        escrowCrop,
+        escrowSeller || '0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc',
+        parseFloat(escrowAmount),
+        escrowSymbol
+      );
+      setEscrowCrop('');
+      setEscrowSeller('');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsCreatingEscrow(false);
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-16">
       <div className="flex items-center gap-3 mb-8">
         <ShoppingBag className="w-8 h-8 text-emerald-600" />
         <h1 className="text-3xl font-bold text-gray-900">
-          {isEn ? 'Agri Market & Suggestions' : 'कृषि बाज़ार और सुझाव'}
+          {isEn ? 'Agri Market & Web3 Hub' : 'कृषि बाज़ार और वेब3 हब'}
         </h1>
       </div>
 
@@ -49,6 +79,13 @@ export default function Market() {
         >
           <Leaf className="w-4 h-4" />
           {isEn ? 'Expert Suggestions' : 'विशेषज्ञ सुझाव'}
+        </button>
+        <button
+          onClick={() => setActiveTab('web3_escrow')}
+          className={cn("px-4 py-2 rounded-xl font-medium transition-colors flex items-center gap-2", activeTab === 'web3_escrow' ? "bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-bold shadow-md" : "bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100")}
+        >
+          <Cpu className="w-4 h-4 text-emerald-400" />
+          {isEn ? 'Web3 Smart Escrow' : 'वेब3 एस्क्रो बाज़ार'}
         </button>
         <button
           onClick={() => setActiveTab('online')}
@@ -82,6 +119,149 @@ export default function Market() {
 
       <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-200 min-h-[500px]">
         
+        {activeTab === 'web3_escrow' && (
+          <div className="space-y-8 animate-in fade-in duration-300">
+            {/* Header Banner */}
+            <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white p-6 rounded-2xl border border-emerald-500/40 shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h2 className="text-xl font-extrabold flex items-center gap-2">
+                  <ShieldCheck className="w-6 h-6 text-emerald-400" />
+                  P2P Crop Smart Contract Escrow
+                </h2>
+                <p className="text-xs text-emerald-200 mt-1 max-w-xl">
+                  Buyers lock funds into EVM Smart Contracts (USDC / MATIC / $AGRI). Funds are automatically released to the farmer upon verified crop delivery. Zero middlemen, 100% trustless.
+                </p>
+              </div>
+              <div className="bg-emerald-950/80 border border-emerald-500/30 p-3 rounded-xl text-right shrink-0">
+                <div className="text-[10px] text-emerald-400 font-bold uppercase">Escrow Protocol</div>
+                <div className="text-xs font-mono text-emerald-200">Polygon Amoy Testnet</div>
+              </div>
+            </div>
+
+            {/* Create New Escrow Form */}
+            <form onSubmit={handleCreateEscrow} className="bg-emerald-50/50 border border-emerald-200 p-6 rounded-2xl space-y-4">
+              <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                <Lock className="w-5 h-5 text-emerald-600" />
+                Create New Smart Escrow Trade
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Crop / Product Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 500kg Wheat Batch"
+                    value={escrowCrop}
+                    onChange={(e) => setEscrowCrop(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Seller Wallet Address</label>
+                  <input
+                    type="text"
+                    placeholder="0x... (Defaults to Demo Seller)"
+                    value={escrowSeller}
+                    onChange={(e) => setEscrowSeller(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Amount & Currency</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      required
+                      value={escrowAmount}
+                      onChange={(e) => setEscrowAmount(e.target.value)}
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
+                    />
+                    <select
+                      value={escrowSymbol}
+                      onChange={(e) => setEscrowSymbol(e.target.value as any)}
+                      className="bg-white border border-slate-300 rounded-xl px-2 py-2 text-xs font-bold"
+                    >
+                      <option value="USDC">USDC</option>
+                      <option value="MATIC">MATIC</option>
+                      <option value="AGRI">$AGRI</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    disabled={isCreatingEscrow}
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    {isCreatingEscrow ? 'Locking Funds...' : 'Lock Funds in Escrow'}
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            {/* Active Escrow Deals */}
+            <div>
+              <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center justify-between">
+                <span>Active Smart Escrow Deals</span>
+                <span className="text-xs text-slate-500 font-normal">{escrows.length} Total</span>
+              </h3>
+              <div className="space-y-4">
+                {escrows.map((deal) => (
+                  <div
+                    key={deal.id}
+                    className="border border-slate-200 rounded-2xl p-5 bg-white hover:shadow-md transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-slate-900 text-base">{deal.cropName}</span>
+                        <span
+                          className={cn(
+                            "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider",
+                            deal.status === 'locked'
+                              ? "bg-amber-100 text-amber-800 border border-amber-300"
+                              : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                          )}
+                        >
+                          {deal.status === 'locked' ? 'Locked in Contract' : 'Completed & Released'}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-500 flex items-center gap-4">
+                        <span>Seller: <code className="text-slate-700">{deal.sellerAddress.substring(0, 10)}...</code></span>
+                        <span>Created: {new Date(deal.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                      <div className="text-right">
+                        <div className="text-lg font-black text-slate-900">
+                          {deal.amountCrypto} {deal.cryptoSymbol}
+                        </div>
+                        <a
+                          href={`https://amoy.polygonscan.com/tx/${deal.txHash}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[10px] text-blue-500 hover:underline flex items-center gap-0.5 font-mono"
+                        >
+                          Tx Details <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      </div>
+
+                      {deal.status === 'locked' && (
+                        <button
+                          onClick={() => releaseEscrow(deal.id)}
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition-colors"
+                        >
+                          Confirm & Release Funds
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'suggestions' && (
           <div className="space-y-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">

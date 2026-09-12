@@ -1,11 +1,32 @@
 import { useState } from 'react';
 import { useStore, Transaction } from '../store/useStore';
-import { Wallet, TrendingUp, TrendingDown, Plus, Trash2, IndianRupee } from 'lucide-react';
+import { useWeb3Store } from '../store/useWeb3Store';
+import { Wallet, TrendingUp, TrendingDown, Plus, Trash2, IndianRupee, Cpu, Sparkles, ShieldCheck, Coins, ArrowUpRight } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export default function Budget() {
   const { language, transactions, addTransaction, deleteTransaction } = useStore();
+  const { rwaLoans, applyRWALoan, repayRWALoan, isConnected, connectSmartWallet } = useWeb3Store();
   const isEn = language === 'en';
+
+  const [loanYieldKg, setLoanYieldKg] = useState('2000');
+  const [loanCrop, setLoanCrop] = useState('Cotton');
+  const [loanUSDC, setLoanUSDC] = useState('500');
+  const [isApplyingLoan, setIsApplyingLoan] = useState(false);
+
+  const handleApplyLoan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loanYieldKg || !loanUSDC) return;
+    setIsApplyingLoan(true);
+    try {
+      if (!isConnected) connectSmartWallet();
+      await applyRWALoan(parseFloat(loanYieldKg), loanCrop, parseFloat(loanUSDC));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsApplyingLoan(false);
+    }
+  };
 
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({
@@ -166,6 +187,134 @@ export default function Budget() {
               </div>
             ))
           )}
+        </div>
+      </div>
+
+      {/* Web3 RWA Crop Yield Tokenization & Micro-Loans */}
+      <div className="bg-gradient-to-r from-slate-900 via-emerald-950 to-teal-950 text-white p-6 md:p-8 rounded-3xl border border-emerald-500/40 shadow-xl space-y-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-emerald-500/30 pb-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3.5 bg-emerald-500/20 border border-emerald-400/30 rounded-2xl">
+              <Cpu className="w-8 h-8 text-emerald-400" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black flex items-center gap-2">
+                RWA Crop Yield Tokenization & DeFi Loans
+                <span className="text-xs bg-emerald-500 text-slate-950 font-black px-2.5 py-0.5 rounded-full uppercase">
+                  4.5% APR Low-Interest
+                </span>
+              </h2>
+              <p className="text-xs text-emerald-200 mt-1">
+                Tokenize your upcoming harvest yield into Real-World Asset (RWA) smart contracts to borrow instant liquidity in USDC. Repay anytime with your crop sale profits.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Apply Form */}
+          <form onSubmit={handleApplyLoan} className="bg-emerald-950/60 border border-emerald-500/30 p-5 rounded-2xl space-y-4">
+            <h3 className="text-sm font-bold text-emerald-300 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+              Tokenize Yield & Borrow USDC
+            </h3>
+
+            <div>
+              <label className="block text-xs text-emerald-300 mb-1">Expected Crop Yield (Kg)</label>
+              <input
+                type="number"
+                required
+                value={loanYieldKg}
+                onChange={(e) => setLoanYieldKg(e.target.value)}
+                className="w-full bg-slate-900 border border-emerald-500/40 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-emerald-300 mb-1">Crop Type</label>
+              <select
+                value={loanCrop}
+                onChange={(e) => setLoanCrop(e.target.value)}
+                className="w-full bg-slate-900 border border-emerald-500/40 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none"
+              >
+                <option value="Cotton">Cotton</option>
+                <option value="Wheat">Wheat</option>
+                <option value="Rice (Basmati)">Rice (Basmati)</option>
+                <option value="Soybean">Soybean</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs text-emerald-300 mb-1">Requested USDC Loan Amount</label>
+              <input
+                type="number"
+                required
+                value={loanUSDC}
+                onChange={(e) => setLoanUSDC(e.target.value)}
+                className="w-full bg-slate-900 border border-emerald-500/40 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isApplyingLoan}
+              className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+            >
+              {isApplyingLoan ? 'Disbursing USDC Loan...' : 'Tokenize & Disburse USDC Loan'}
+            </button>
+          </form>
+
+          {/* Active RWA Loans */}
+          <div className="lg:col-span-2 space-y-4">
+            <h3 className="text-sm font-bold text-emerald-300">Active RWA Yield Loans</h3>
+            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+              {rwaLoans.map((loan) => (
+                <div
+                  key={loan.id}
+                  className="bg-slate-900/90 border border-emerald-500/30 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-white text-sm">
+                        {loan.cropYieldKg}kg {loan.cropType} Collateral
+                      </span>
+                      <span
+                        className={cn(
+                          "px-2 py-0.5 rounded-full text-[10px] font-black uppercase",
+                          loan.status === 'Active'
+                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                            : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                        )}
+                      >
+                        {loan.status}
+                      </span>
+                    </div>
+                    <div className="text-emerald-300 text-[11px] mt-1">
+                      Collateral NFT ID: <code className="text-emerald-200">{loan.collateralNFTId}</code> | Interest Rate: {loan.interestRate}% APR
+                    </div>
+                    <div className="text-slate-400 text-[10px] mt-1">
+                      Due Date: {new Date(loan.dueDate).toLocaleDateString()}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                    <div className="text-right">
+                      <div className="text-base font-black text-emerald-400">${loan.loanAmountUSDC} USDC</div>
+                      <div className="text-[10px] text-slate-400">Total Payable: ${Math.round(loan.loanAmountUSDC * 1.045)}</div>
+                    </div>
+                    {loan.status === 'Active' && (
+                      <button
+                        onClick={() => repayRWALoan(loan.id)}
+                        className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-[11px] shadow transition-colors shrink-0"
+                      >
+                        Repay Loan
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
