@@ -1,10 +1,10 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { Leaf, Menu, X, Globe, User, Home, Stethoscope, MessageSquare, BookOpen, LayoutDashboard, Landmark, Store, Wallet, Bell, ArrowLeft, Sun, Moon, LogIn, LogOut, Crown, PhoneCall } from 'lucide-react';
+import { Leaf, Menu, X, Globe, User, Home, Stethoscope, MessageSquare, BookOpen, LayoutDashboard, Landmark, Store, Wallet, Bell, ArrowLeft, Sun, Moon, LogIn, LogOut, Crown, PhoneCall, Coins } from 'lucide-react';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '../lib/utils';
-import { supabase } from '../lib/supabase';
+import { logout } from '../lib/supabase';
 import { AuthModal } from './AuthModal';
 import { ProModal } from './ProModal';
 
@@ -13,6 +13,7 @@ export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -22,7 +23,7 @@ export function Navbar() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await logout();
       navigate('/');
     } catch (error) {
       console.error('Logout error:', error);

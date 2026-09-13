@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html><body>
+<script>
+  const htmlString = '<!doctype html><html></html>';
+  const res = new Response(htmlString, { status: 200, headers: { 'Content-Type': 'text/html' } });
+  res.json().catch(err => {
+    document.body.innerText = err.message;
+  });
+</script>
+</body></html>

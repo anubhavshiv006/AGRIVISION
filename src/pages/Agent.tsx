@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { Bot, Mic, Send, MicOff, AlertCircle, Volume2, VolumeX } from 'lucide-react';
+import { Bot, Mic, Send, MicOff, AlertCircle, Volume2, VolumeX, Coins } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../lib/utils';
 import { useLocation } from 'react-router-dom';
@@ -14,7 +14,8 @@ interface Message {
 }
 
 export default function Agent() {
-  const { language } = useStore();
+  const { language, walletAddress, addKisanTokens } = useStore();
+  const [earnedTokenMessage, setEarnedTokenMessage] = useState<string | null>(null);
   const isEn = language === 'en';
   const location = useLocation();
   const initialPrompt = location.state?.initialPrompt;
@@ -123,6 +124,13 @@ export default function Agent() {
       
       const data = await res.json();
       setMessages([...newMessages, { role: 'model', content: data.text }]);
+      
+      // Token Reward Logic
+      if (walletAddress) {
+        addKisanTokens(5);
+        setEarnedTokenMessage('+5 KISAN');
+        setTimeout(() => setEarnedTokenMessage(null), 3000);
+      }
     } catch (error) {
       console.error(error);
       setMessages([...newMessages, { 
@@ -139,7 +147,7 @@ export default function Agent() {
   }, [messages, loading]);
 
   return (
-    <div className="max-w-4xl mx-auto h-[calc(100vh-8rem)] flex flex-col">
+    <div className="max-w-4xl mx-auto h-[calc(100vh-8rem)] flex flex-col relative">
       <div className="text-center space-y-2 mb-6 shrink-0">
         <h1 className="text-3xl font-bold text-gray-900 flex items-center justify-center gap-2">
           <Bot className="w-8 h-8 text-purple-600" />
@@ -194,6 +202,34 @@ export default function Agent() {
 
         {/* Input Area */}
         <div className="p-4 bg-gray-50 border-t border-gray-100 shrink-0">
+          {/* Quick Prompts */}
+          {messages.length === 0 && !initialPrompt && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {[
+                isEn ? "How to improve soil fertility?" : "मिट्टी की उर्वरता कैसे बढ़ाएं?",
+                isEn ? "What are organic pesticides?" : "जैविक कीटनाशक क्या हैं?",
+                isEn ? "Best crops for summer season" : "गर्मी के मौसम के लिए सबसे अच्छी फसलें",
+                isEn ? "How to save water in farming?" : "खेती में पानी कैसे बचाएं?"
+              ].map((promptText, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSend(promptText)}
+                  className="px-3 py-1.5 bg-white border border-gray-200 text-green-700 text-sm rounded-full shadow-sm hover:bg-green-50 hover:border-green-300 transition-colors"
+                >
+                  {promptText}
+                </button>
+              ))}
+            </div>
+          )}
+          
+          {/* Token Earning Notification */}
+          {earnedTokenMessage && (
+            <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 mb-4 bg-amber-500 text-white px-4 py-2 rounded-full shadow-lg font-bold flex items-center gap-2 animate-bounce z-50">
+              <Coins className="w-5 h-5" />
+              {earnedTokenMessage}
+            </div>
+          )}
+
           {speechError && (
             <div className="mb-2 text-sm text-red-600 flex items-center gap-1">
               <AlertCircle className="w-4 h-4" /> {speechError}

@@ -3,9 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 let supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 let supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
 
-// Ensure the URL is valid HTTP/HTTPS to prevent app crashes
 if (supabaseUrl && !supabaseUrl.startsWith('http://') && !supabaseUrl.startsWith('https://')) {
-  // If user just provided the project ID or domain without https://
   if (supabaseUrl.includes('.')) {
     supabaseUrl = `https://${supabaseUrl}`;
   } else {
@@ -13,7 +11,6 @@ if (supabaseUrl && !supabaseUrl.startsWith('http://') && !supabaseUrl.startsWith
   }
 }
 
-// Final safety check
 try {
   new URL(supabaseUrl);
 } catch (e) {
@@ -21,3 +18,27 @@ try {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export const ensureUserProfile = async (user: any) => {
+  if (!user) return;
+  
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({
+        id: user.id,
+        name: user.user_metadata?.full_name || user.phone || 'KisanMitra User',
+        phone: user.phone || '',
+        photo_url: user.user_metadata?.avatar_url || '',
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id', ignoreDuplicates: true });
+      
+    if (error) console.error("Error ensuring profile:", error);
+  } catch (err) {
+    console.error("Supabase profile error:", err);
+  }
+};
+
+export const logout = async () => {
+  await supabase.auth.signOut();
+};

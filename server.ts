@@ -15,11 +15,70 @@ const ai = new GoogleGenAI({
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Robust wrapper for Gemini API calls to handle rate limits and model deprecations
+async function safeGenerateContent(aiClient, params, retries = 2) {
+  const fallbackModels = [
+    "gemini-3.5-flash", 
+    "gemini-3.1-pro-preview", 
+    "gemini-3.6-flash", 
+    "gemini-3.1-flash-lite", 
+    "gemini-2.5-flash"
+  ];
+  
+  const targetModel = params.model || fallbackModels[0];
+  const modelsToTry = [targetModel, ...fallbackModels.filter(m => m !== targetModel)];
+  
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    for (const model of modelsToTry) {
+      try {
+        console.log(`Attempting generation with model: ${model} (Attempt ${attempt + 1})`);
+        const response = await aiClient.models.generateContent({
+          ...params,
+          model: model
+        });
+        return response;
+      } catch (error) {
+        lastError = error;
+        const errMsg = error?.message || "";
+        
+        if (errMsg.includes("NOT_FOUND") || errMsg.includes("404") || errMsg.includes("is no longer available")) {
+          console.warn(`[Fallback] Model ${model} unavailable. Trying next...`);
+          continue; 
+        }
+        
+        if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED") || errMsg.includes("quota")) {
+          console.warn(`[RateLimit] Hit quota on ${model}. Switching models...`);
+          continue; 
+        }
+
+        if (errMsg.includes("503") || errMsg.includes("overloaded")) {
+          console.warn(`[Overload] Service overloaded. Waiting...`);
+          break;
+        }
+        
+        throw error;
+      }
+    }
+    
+    if (attempt < retries) {
+       const delay = 2000 * (attempt + 1);
+       console.log(`Waiting ${delay}ms before next retry cycle...`);
+       await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError;
+}
+
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   // API Routes
   app.get("/api/health", (req, res) => {
@@ -48,8 +107,8 @@ async function startServer() {
 
       const isAutoDetect = cropType === 'Auto Detect (AI)' || cropType === 'स्वत: पहचान (AI)';
       const cropContextPrompt = isAutoDetect 
-        ? "The user doesn't know the exact crop type. You MUST auto-detect the specific crop species from the image." 
-        : `Analyze the provided image of a ${cropType} crop.`;
+        ? "The user doesn't know the exact crop type. You MUST closely examine the image and identify the EXACT crop/plant species (e.g., 'Tomato Plant', 'Rice Crop', 'Apple Tree'). Include this clearly in 'detectedObject'." 
+        : `The user claims this is a ${cropType} crop. Verify it, and analyze the image.`;
 
       const prompt = `You are an expert AI Crop Doctor (KisanMitra). ${cropContextPrompt}
 The user has reported the following symptoms (if any): ${symptoms || "None reported"}.
@@ -90,11 +149,11 @@ ${langContext}`;
           preventionTips: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Tips to prevent this in the future." },
           expertRecommendation: { type: Type.STRING, description: "When and why to consult an agricultural expert." }
         },
-        required: ["isImageValid", "detectedObject"]
+        required: ["isImageValid", "detectedObject", "invalidMessage", "possibleProblem", "diseaseStage", "severity", "confidence", "visibleSymptoms", "possibleCauses", "organicTreatments", "chemicalTreatments", "nextSteps", "preventionTips", "expertRecommendation"]
       };
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+      const response = await safeGenerateContent(ai, {
+        model: "gemini-3.5-flash",
         contents: [imagePart, { text: prompt }],
         config: {
           responseMimeType: "application/json",
@@ -103,11 +162,48 @@ ${langContext}`;
       });
 
       let text = response.text || "{}";
-      text = text.replace(/```json/gi, "").replace(/```/g, "").trim();
-      res.json(JSON.parse(text));
+      text = text.replace(/\s*```json\s*/gi, "").replace(/\s*```\s*/g, "").trim();
+      
+      // Attempt to extract JSON if there's text before/after
+      const jsonStart = text.indexOf('{');
+      const jsonEnd = text.lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        text = text.substring(jsonStart, jsonEnd + 1);
+      }
+      
+      let parsed = {};
+      try {
+        parsed = JSON.parse(text);
+      } catch (parseError) {
+        console.error("JSON Parse Error. Raw text:", text);
+        // Fallback for completely broken JSON
+        parsed = {
+          isImageValid: false,
+          detectedObject: "Unknown due to AI formatting error",
+          invalidMessage: "The AI encountered an issue formatting the response. Please try again.",
+          possibleProblem: "Error",
+          diseaseStage: "None",
+          severity: "None",
+          confidence: "Low",
+          visibleSymptoms: [],
+          possibleCauses: [],
+          organicTreatments: [],
+          chemicalTreatments: [],
+          nextSteps: ["Please try submitting the image again."],
+          preventionTips: [],
+          expertRecommendation: "System error, please retry."
+        };
+      }
+      res.json(parsed);
     } catch (error: any) {
       console.error("Gemini API Error:", error);
-      res.status(500).json({ error: error?.message || error?.toString() || "Failed to analyze crop image." });
+      let errMsg = error?.message || error?.toString() || "Failed to analyze crop image.";
+      if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED") || errMsg.includes("quota")) {
+        errMsg = "AI is currently very busy (Rate Limit). Please wait 30 seconds and try again.";
+      } else if (errMsg.includes("{")) {
+         try { errMsg = JSON.parse(errMsg).error.message; } catch (e) {}
+      }
+      res.status(500).json({ error: errMsg });
     }
   });
 
@@ -120,10 +216,14 @@ ${langContext}`;
         "Please respond in English. Ensure the language is simple and easy to understand for a farmer. You are KisanMitra, an AI Farming Agent.";
 
       const systemInstruction = `${langContext}
-You are a helpful conversational AI assistant for farmers. You should ask useful follow-up questions instead of immediately guessing a problem if you don't have enough context.
-For example, ask about crop type, age, symptoms, when it started, extent of damage, location, or recent weather.
-When you have enough info, generate a structured response with: What I Understand, Possible Causes, What You Can Check, Recommended Next Steps, What to Monitor, When to Contact an Expert.
-Clearly communicate uncertainty. Do not provide dangerous chemical dosages without expert consultation.`;
+You are KisanMitra, an advanced and highly knowledgeable AI Agricultural Consultant.
+Rules:
+1. Empathy & Tone: Be respectful, encouraging, and highly practical. Avoid being overly robotic.
+2. Context Gathering: If the farmer asks a vague question (e.g., "my plant is dying"), DO NOT guess immediately. Ask 2-3 specific, easy-to-answer questions (e.g., "Which crop is it?", "Are the leaves turning yellow or brown?", "How often do you water?").
+3. Structured Answers: When providing solutions, use clear headings, bullet points, and simple language.
+4. Holistic Approach: Always suggest a mix of organic/natural remedies, cultural practices (watering, spacing), and finally, safe chemical options only if necessary.
+5. Safety First: Clearly communicate uncertainty. Do not provide dangerous chemical dosages without recommending they consult a local expert or read the label.
+6. Formatting: Use emojis occasionally to make the text friendly and scannable.`;
 
       // Construct Gemini contents array. Ensure the last one is the new user prompt.
       const contents = messages.map((m: any) => ({
@@ -131,8 +231,8 @@ Clearly communicate uncertainty. Do not provide dangerous chemical dosages witho
         parts: [{ text: m.content }]
       }));
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+      const response = await safeGenerateContent(ai, {
+        model: "gemini-3.5-flash",
         contents: contents,
         config: {
           systemInstruction: systemInstruction
@@ -142,7 +242,13 @@ Clearly communicate uncertainty. Do not provide dangerous chemical dosages witho
       res.json({ text: response.text });
     } catch (error: any) {
       console.error("Gemini API Error:", error);
-      res.status(500).json({ error: error?.message || error?.toString() || "Failed to chat." });
+      let errMsg = error?.message || error?.toString() || "Failed to chat.";
+      if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED") || errMsg.includes("quota")) {
+        errMsg = "AI is currently very busy (Rate Limit). Please wait 30 seconds and try again.";
+      } else if (errMsg.includes("{")) {
+         try { errMsg = JSON.parse(errMsg).error.message; } catch (e) {}
+      }
+      res.status(500).json({ error: errMsg });
     }
   });
 
@@ -167,8 +273,8 @@ ${langContext}`;
         }
       };
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+      const response = await safeGenerateContent(ai, {
+        model: "gemini-3.5-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -176,11 +282,30 @@ ${langContext}`;
         }
       });
       let text = response.text || "[]";
-      text = text.replace(/```json/gi, "").replace(/```/g, "").trim();
-      res.json(JSON.parse(text));
+      text = text.replace(/\s*```json\s*/gi, "").replace(/\s*```\s*/g, "").trim();
+      
+      const jsonStart = text.indexOf('[');
+      const jsonEnd = text.lastIndexOf(']');
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        text = text.substring(jsonStart, jsonEnd + 1);
+      }
+      
+      let parsed = [];
+      try {
+        parsed = JSON.parse(text);
+      } catch (parseError) {
+        console.error("JSON Parse Error. Raw text:", text);
+      }
+      res.json(parsed);
     } catch (error: any) {
       console.error("Gemini Plan Error:", error);
-      res.status(500).json({ error: error?.message || error?.toString() || "Failed to generate plan." });
+      let errMsg = error?.message || error?.toString() || "Failed to generate plan.";
+      if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED") || errMsg.includes("quota")) {
+        errMsg = "AI is currently very busy (Rate Limit). Please wait 30 seconds and try again.";
+      } else if (errMsg.includes("{")) {
+         try { errMsg = JSON.parse(errMsg).error.message; } catch (e) {}
+      }
+      res.status(500).json({ error: errMsg });
     }
   });
 
@@ -199,6 +324,17 @@ ${langContext}`;
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  
+  // Global error handler to ensure JSON responses for API routes
+  app.use((err, req, res, next) => {
+    console.error("Unhandled Global Error:", err);
+    if (req.path.startsWith('/api/')) {
+      res.status(err.status || 500).json({ error: err.message || "Internal Server Error" });
+    } else {
+      next(err);
+    }
+  });
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);

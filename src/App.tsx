@@ -1,14 +1,9 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { Suspense, lazy, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { Leaf } from 'lucide-react';
 import { useStore } from './store/useStore';
-import { supabase } from './lib/supabase';
+import { supabase, ensureUserProfile } from './lib/supabase';
 import { AnimatePresence, motion } from 'motion/react';
 
 import Home from './pages/Home';
@@ -46,6 +41,7 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => (
 
 function AnimatedRoutes() {
   const location = useLocation();
+  
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
@@ -68,39 +64,26 @@ export default function App() {
   const { theme, setUser } = useStore();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const user = session?.user;
+      if (user) {
+        try {
+          await ensureUserProfile(user);
+        } catch (error) {
+          console.error("Profile sync error:", error);
+        }
         setUser({
-          uid: session.user.id,
-          email: session.user.email || null,
-          displayName: session.user.user_metadata?.full_name || null,
-          photoURL: session.user.user_metadata?.avatar_url || null,
-        });
-      } else {
-        setUser(null);
-      }
-    }).catch((err) => {
-      console.warn("Supabase not configured or network error:", err);
-    });
-
-    const authListener = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser({
-          uid: session.user.id,
-          email: session.user.email || null,
-          displayName: session.user.user_metadata?.full_name || null,
-          photoURL: session.user.user_metadata?.avatar_url || null,
+          uid: user.id,
+          email: user.email || null,
+          displayName: user.user_metadata?.full_name || user.phone || null,
+          photoURL: user.user_metadata?.avatar_url || null,
         });
       } else {
         setUser(null);
       }
     });
 
-    return () => {
-      if (authListener && authListener.data && authListener.data.subscription) {
-         authListener.data.subscription.unsubscribe();
-      }
-    };
+    return () => subscription.unsubscribe();
   }, [setUser]);
 
   useEffect(() => {

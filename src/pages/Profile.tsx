@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { UserCircle, Save, MapPin, Phone, Ruler, Camera, Crown, LogOut } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, logout } from '../lib/supabase';
 
 
 export default function Profile() {
@@ -12,7 +12,7 @@ export default function Profile() {
   
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await logout();
       navigate('/');
     } catch (error) {
       console.error('Logout error:', error);
@@ -32,17 +32,15 @@ export default function Profile() {
             .from('profiles')
             .select('*')
             .eq('id', user.uid)
-            .maybeSingle();
-            
-          if (error) throw error;
+            .single();
           
           if (data) {
             const fetchedProfile = {
               name: data.name || '',
               phone: data.phone || '',
               location: data.location || '',
-              farmSize: data.farm_size || '',
-              photoUrl: data.photo_url || user?.photoURL || '',
+              farmSize: data.farm_size || data.farmSize || '',
+              photoUrl: data.photo_url || data.photoUrl || user?.photoURL || '',
               uid: user.uid
             };
             updateProfile(fetchedProfile);
@@ -78,32 +76,24 @@ export default function Profile() {
     setLoading(true);
     try {
       let profileId = user.uid;
-
       // Save to Supabase
       const { error } = await supabase
         .from('profiles')
         .upsert({
           id: user.uid,
-          name: formData.name,
-          phone: formData.phone,
-          location: formData.location,
-          farm_size: formData.farmSize,
-          photo_url: formData.photoUrl,
+          name: formData.name || '',
+          phone: formData.phone || '',
+          location: formData.location || '',
+          farm_size: formData.farmSize || '',
+          photo_url: formData.photoUrl || '',
           updated_at: new Date().toISOString()
         });
-        
-      if (error) {
-        if (error.message.includes('relation "public.profiles" does not exist') || error.message.includes('invalid input syntax')) {
-            alert(isEn 
-              ? '❌ Database Table Missing or Incorrect!\n\nPlease go to your Supabase Dashboard -> SQL Editor, and run the SQL code to create the "profiles" table with UUID type.' 
-              : '❌ डेटाबेस टेबल नहीं है या गलत है!\n\nकृपया अपने Supabase Dashboard -> SQL Editor में जाएँ और "profiles" टेबल (UUID के साथ) बनाने वाला कोड रन करें।');
-        }
-        throw error;
-      }
+      
+      if (error) throw error;
 
       updateProfile({ ...formData, uid: profileId });
       setIsEditing(false);
-      alert(isEn ? '✅ Profile saved to Supabase successfully!' : '✅ प्रोफ़ाइल सफलतापूर्वक Supabase में सहेजी गई!');
+      alert(isEn ? '✅ Profile saved successfully!' : '✅ प्रोफ़ाइल सफलतापूर्वक सहेजी गई!');
     } catch (error: any) {
       console.error("Error updating profile", error);
       alert((isEn ? 'Error saving profile: ' : 'प्रोफ़ाइल सहेजने में त्रुटि: ') + (error.message || JSON.stringify(error)));

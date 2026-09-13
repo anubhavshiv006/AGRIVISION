@@ -107,10 +107,28 @@ export default function CropDoctor() {
       });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        throw new Error(errorData?.error || 'Failed to analyze image');
+        let errorMsg = 'Failed to analyze image';
+        try {
+          const contentType = res.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await res.json();
+            errorMsg = errorData.error || errorMsg;
+          } else {
+            const text = await res.text();
+            console.error("Non-JSON error response:", text);
+            if (res.status === 413) errorMsg = 'Image file is too large. Please upload a smaller image.';
+            else errorMsg = `Server error (${res.status}). Please try again later.`;
+          }
+        } catch (e) {}
+        throw new Error(errorMsg);
       }
       
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text();
+        console.error("Expected JSON but got:", text);
+        throw new Error("Server returned an invalid format. Please try again.");
+      }
       const data = await res.json();
       setResult(data);
 

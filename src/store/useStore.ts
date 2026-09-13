@@ -70,6 +70,10 @@ export interface AppUser {
 interface AppState {
   user: AppUser | null;
   setUser: (user: AppUser | null) => void;
+  walletAddress: string | null;
+  setWalletAddress: (address: string | null) => void;
+  kisanTokens: number;
+  addKisanTokens: (amount: number) => void;
   theme: Theme;
   toggleTheme: () => void;
   language: Language;
@@ -103,6 +107,10 @@ export const useStore = create<AppState>()(
     (set) => ({
       user: null,
       setUser: (user) => set({ user }),
+      walletAddress: null,
+      setWalletAddress: (walletAddress) => set({ walletAddress }),
+      kisanTokens: 0,
+      addKisanTokens: (amount) => set((state) => ({ kisanTokens: state.kisanTokens + amount })),
       theme: 'light',
       toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
       language: 'en',
