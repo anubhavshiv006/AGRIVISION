@@ -3,12 +3,6 @@
   publish = "dist"
 
 [[redirects]]
-  from = "/api/*"
-  to = "/api/:splat"
-  status = 404
-  force = true
-
-[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

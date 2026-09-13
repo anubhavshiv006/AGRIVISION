@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
+import { generateFarmPlan } from '../lib/gemini';
 import { LayoutDashboard, History, CheckCircle2, Circle, Plus, Calendar, Crown } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
@@ -14,13 +15,7 @@ export default function Dashboard() {
   const generatePlan = async (historyId: string, crop: string, problem: string) => {
     setLoadingPlan(historyId);
     try {
-      const res = await fetch('/api/gemini/generate-plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ crop, problem, language })
-      });
-      if (!res.ok) throw new Error('Failed to generate plan');
-      const tasks = await res.json();
+      const tasks = await generateFarmPlan(crop, problem, language);
       
       addPlan({
         id: historyId,

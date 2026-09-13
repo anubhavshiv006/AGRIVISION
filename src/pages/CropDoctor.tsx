@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
+import { analyzeCropImage } from '../lib/gemini';
 import { Camera, Upload, AlertCircle, CheckCircle2, ChevronRight, X, AlertTriangle, Bot, Leaf, FlaskConical, Stethoscope, ShieldCheck } from 'lucide-react';
 import Webcam from 'react-webcam';
 import { cn } from '../lib/utils';
@@ -101,35 +102,8 @@ export default function CropDoctor() {
     formData.append('language', language);
 
     try {
-      const res = await fetch('/api/gemini/analyze-crop', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) {
-        let errorMsg = 'Failed to analyze image';
-        try {
-          const contentType = res.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            const errorData = await res.json();
-            errorMsg = errorData.error || errorMsg;
-          } else {
-            const text = await res.text();
-            console.error("Non-JSON error response:", text);
-            if (res.status === 413) errorMsg = 'Image file is too large. Please upload a smaller image.';
-            else errorMsg = `Server error (${res.status}). Please try again later.`;
-          }
-        } catch (e) {}
-        throw new Error(errorMsg);
-      }
+      const data = await analyzeCropImage(file, cropType, symptoms, language);
       
-      const contentType = res.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await res.text();
-        console.error("Expected JSON but got:", text);
-        throw new Error("Server returned an invalid format. Please try again.");
-      }
-      const data = await res.json();
       setResult(data);
 
       if (data.isImageValid && data.possibleProblem) {

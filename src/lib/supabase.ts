@@ -33,9 +33,19 @@ export const ensureUserProfile = async (user: any) => {
         updated_at: new Date().toISOString()
       }, { onConflict: 'id', ignoreDuplicates: true });
       
-    if (error) console.error("Error ensuring profile:", error);
-  } catch (err) {
-    console.error("Supabase profile error:", err);
+    if (error) {
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('FetchError')) {
+        console.warn("Could not connect to Supabase (Failed to fetch). If you are in the preview, ensure your Supabase URL is correct and the project is active.");
+      } else {
+        console.error("Error ensuring profile:", error);
+      }
+    }
+  } catch (err: any) {
+    if (err?.message === 'Failed to fetch' || err?.message?.includes('FetchError') || err?.toString().includes('TypeError: Failed to fetch')) {
+      console.warn("Could not connect to Supabase (Failed to fetch). Please check your Supabase project status.");
+    } else {
+      console.error("Supabase profile error:", err);
+    }
   }
 };
 

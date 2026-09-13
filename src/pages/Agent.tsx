@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store/useStore';
+import { chatWithAgent } from '../lib/gemini';
 import { Bot, Mic, Send, MicOff, AlertCircle, Volume2, VolumeX, Coins } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../lib/utils';
@@ -111,18 +112,7 @@ export default function Agent() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/gemini/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: newMessages,
-          language
-        })
-      });
-
-      if (!res.ok) throw new Error('Failed to chat');
-      
-      const data = await res.json();
+      const data = await chatWithAgent(newMessages, language);
       setMessages([...newMessages, { role: 'model', content: data.text }]);
       
       // Token Reward Logic
